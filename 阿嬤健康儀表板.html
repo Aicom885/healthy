@@ -1,0 +1,601 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>阿嬤健康儀表板</title>
+<style>
+:root {
+  --bg: #f6f2ea;
+  --panel: #fffdf8;
+  --ink: #23313d;
+  --muted: #657282;
+  --line: #d9dfdf;
+  --green: #28755a;
+  --blue: #246b8f;
+  --amber: #a96522;
+  --red: #b9413d;
+  --violet: #775f95;
+  --soft-green: #e8f3ed;
+  --soft-blue: #e6f0f5;
+  --soft-amber: #fbefe1;
+  --soft-red: #fae9e6;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: "Microsoft JhengHei", "Noto Sans TC", Arial, sans-serif;
+  color: var(--ink);
+  background: var(--bg);
+}
+header {
+  background: #fff;
+  border-bottom: 1px solid var(--line);
+  padding: 24px clamp(16px, 4vw, 42px) 18px;
+}
+.topline {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: flex-start;
+  max-width: 1280px;
+  margin: 0 auto;
+}
+h1 { margin: 0 0 8px; font-size: clamp(26px, 4vw, 40px); letter-spacing: 0; }
+.sub { color: var(--muted); line-height: 1.6; font-size: 15px; }
+.source a { color: var(--blue); text-decoration: none; font-weight: 700; }
+main {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 20px clamp(16px, 4vw, 42px) 42px;
+}
+.status {
+  border: 1px solid var(--line);
+  background: var(--panel);
+  border-radius: 8px;
+  padding: 12px 14px;
+  margin-bottom: 14px;
+  color: var(--muted);
+}
+.cards { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 12px; margin-bottom: 14px; }
+.card, section {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+.card { min-height: 116px; padding: 14px; }
+.label { color: var(--muted); font-size: 13px; margin-bottom: 8px; }
+.value { font-size: 28px; font-weight: 800; line-height: 1.1; }
+.hint { color: var(--muted); font-size: 12px; line-height: 1.45; margin-top: 8px; }
+.layout { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(300px, .95fr); gap: 14px; align-items: start; }
+section { padding: 16px; margin-bottom: 14px; }
+h2 { margin: 0 0 12px; font-size: 19px; letter-spacing: 0; }
+canvas { width: 100%; height: 300px; border: 1px solid var(--line); border-radius: 6px; background: #fff; }
+.bowel-chart { display: grid; grid-template-columns: repeat(auto-fit, minmax(42px, 1fr)); gap: 8px; }
+.bowel-day { border: 1px solid var(--line); border-radius: 8px; background: #fff; padding: 8px 6px; text-align: center; min-height: 78px; }
+.bowel-mark { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; margin: 0 auto 6px; color: #fff; font-weight: 800; font-size: 15px; }
+.bowel-date { font-size: 11px; color: var(--muted); white-space: nowrap; }
+.bowel-state { font-size: 12px; margin-top: 4px; font-weight: 700; }
+.bowel-yes .bowel-mark { background: var(--green); }
+.bowel-no .bowel-mark { background: var(--red); }
+.bowel-mixed .bowel-mark { background: var(--amber); }
+.bowel-empty .bowel-mark { background: #8a96a3; }
+.bowel-legend { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; color: var(--muted); font-size: 12px; }
+.bowel-legend span { display: inline-flex; gap: 5px; align-items: center; }
+.bowel-legend i { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+.toolbar { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+button {
+  border: 1px solid var(--line);
+  background: #fff;
+  color: var(--ink);
+  border-radius: 6px;
+  padding: 8px 12px;
+  cursor: pointer;
+  font: inherit;
+}
+button.active { background: var(--ink); color: #fff; }
+table { width: 100%; border-collapse: collapse; font-size: 14px; }
+th, td { text-align: left; padding: 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { color: var(--muted); background: #fbfaf6; font-weight: 700; }
+.risk-table th:first-child, .risk-table td:first-child { width: 180px; min-width: 180px; }
+.date-cell { display: grid; grid-template-columns: 58px 1fr; gap: 8px; align-items: start; }
+.date-text { white-space: nowrap; line-height: 1.8; }
+.pill {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 4px 9px;
+  font-size: 12px;
+  margin: 2px;
+  border: 1px solid var(--line);
+  background: #fff;
+  white-space: nowrap;
+}
+.risk-high { background: var(--red); border-color: var(--red); color: #fff; }
+.risk-medium { background: var(--amber); border-color: var(--amber); color: #fff; }
+.risk-low { background: var(--green); border-color: var(--green); color: #fff; }
+.analysis { display: grid; gap: 10px; }
+.bars { display: grid; grid-template-columns: 1fr; gap: 12px; }
+.analysis > div { border-left: 4px solid var(--blue); background: var(--soft-blue); padding: 10px 12px; line-height: 1.7; }
+.analysis > div.warn { border-left-color: var(--amber); background: var(--soft-amber); }
+.analysis > div.danger { border-left-color: var(--red); background: var(--soft-red); }
+.analysis > div.good { border-left-color: var(--green); background: var(--soft-green); }
+.pie-card { border: 1px solid var(--line); border-radius: 8px; background: #fff; padding: 12px; min-width: 0; }
+.pie-title { color: var(--muted); font-size: 13px; font-weight: 700; margin-bottom: 10px; }
+.pie-note { color: var(--muted); font-size: 11px; line-height: 1.4; margin-top: 8px; }
+.pie-wrap { display: grid; grid-template-columns: 112px minmax(0, 1fr); gap: 14px; align-items: center; }
+.pie { width: 104px; height: 104px; border-radius: 50%; background: var(--line); position: relative; flex: 0 0 auto; }
+.pie::after { content: ""; position: absolute; inset: 26px; border-radius: 50%; background: #fff; border: 1px solid #eef1f1; }
+.pie-total { position: absolute; inset: 0; display: grid; place-items: center; z-index: 1; font-size: 12px; font-weight: 800; color: var(--ink); text-align: center; }
+.legend { display: grid; gap: 6px; min-width: 0; }
+.legend-head { display: grid; grid-template-columns: 12px minmax(0, 1fr) 74px; gap: 7px; color: var(--muted); font-size: 11px; }
+.legend-row { display: grid; grid-template-columns: 12px minmax(0, 1fr) 74px; gap: 7px; align-items: center; font-size: 13px; }
+.legend-dot { width: 10px; height: 10px; border-radius: 50%; }
+.legend-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.legend-value { color: var(--muted); white-space: nowrap; text-align: right; }
+.latest { display: grid; gap: 8px; }
+.latest-row { display: flex; justify-content: space-between; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--line); align-items: flex-start; }
+.latest-row strong { text-align: right; line-height: 1.45; }
+@media (max-width: 1000px) {
+  .cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .layout { grid-template-columns: 1fr; }
+}
+@media (max-width: 620px) {
+  .topline { display: block; }
+  .cards { grid-template-columns: 1fr; }
+  table { font-size: 12px; }
+  th, td { padding: 8px 6px; }
+  .risk-table th:first-child, .risk-table td:first-child { width: 132px; min-width: 132px; }
+  .date-cell { grid-template-columns: 1fr; gap: 4px; }
+  .bars { grid-template-columns: 1fr; }
+  .pie-wrap { grid-template-columns: 96px 1fr; }
+  .pie { width: 92px; height: 92px; }
+  .pie::after { inset: 23px; }
+}
+</style>
+</head>
+<body>
+<header>
+  <div class="topline">
+    <div>
+      <h1>阿嬤健康儀表板</h1>
+      <div class="sub" id="subtitle">讀取 Google 試算表中...</div>
+    </div>
+    <div class="sub source"><a href="https://docs.google.com/spreadsheets/d/1NZKNe8wJvNbKRbf3YwR3wAg3iqFrehzYZYGkXdhUR6A/edit?gid=0#gid=0" target="_blank" rel="noreferrer">開啟原始試算表</a></div>
+  </div>
+</header>
+<main>
+  <div class="status" id="status">正在用唯讀方式取得最新資料。</div>
+  <div class="cards" id="cards"></div>
+  <div class="layout">
+    <div>
+      <section>
+        <h2>每日喝水趨勢</h2>
+        <canvas id="waterChart" width="920" height="330"></canvas>
+        <div class="hint">橘色虛線是 800 ml 觀察線。喝水目標仍需依醫師限制、腎臟或心臟狀況調整。</div>
+      </section>
+      <section>
+        <h2>每日排便紀錄</h2>
+        <div class="bowel-chart" id="bowelChart"></div>
+        <div class="bowel-legend">
+          <span><i style="background: var(--green)"></i>有排便</span>
+          <span><i style="background: var(--red)"></i>未排便</span>
+          <span><i style="background: var(--amber)"></i>同日混合</span>
+          <span><i style="background: #8a96a3"></i>未填寫</span>
+        </div>
+        <div class="hint">顯示最近 30 天，每一天以當日所有紀錄彙總。</div>
+      </section>
+      <section>
+        <h2>需要注意的日期</h2>
+        <div class="hint">只顯示最近 30 天，日期由新到舊排列。</div>
+        <div class="toolbar">
+          <button class="active" data-filter="all">全部</button>
+          <button data-filter="high">高注意</button>
+          <button data-filter="medium">觀察</button>
+        </div>
+        <div style="overflow:auto">
+          <table class="risk-table">
+            <thead><tr><th>日期</th><th>喝水</th><th>提醒</th><th>備註</th></tr></thead>
+            <tbody id="riskRows"></tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+    <div>
+      <section>
+        <h2>最新一天</h2>
+        <div class="latest" id="latest"></div>
+      </section>
+      <section>
+        <h2>整體分布</h2>
+        <div class="bars" id="bars"></div>
+      </section>
+      <section>
+        <h2>狀況分析與建議</h2>
+        <div class="analysis" id="analysis"></div>
+      </section>
+    </div>
+  </div>
+</main>
+<script>
+const SHEET_ID = "1NZKNe8wJvNbKRbf3YwR3wAg3iqFrehzYZYGkXdhUR6A";
+const SHEET_GID = "0";
+const QUERY_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?gid=${SHEET_GID}&headers=1&tqx=responseHandler:handleSheetResponse;out:json&tq=${encodeURIComponent('select *')}`;
+let currentFilter = 'all';
+
+function handleSheetResponse(response) {
+  try {
+    const rows = parseGviz(response);
+    const records = normalizeRows(rows);
+    if (!records.length) throw new Error('表格沒有可分析的資料列');
+    renderDashboard(records);
+  } catch (error) {
+    showLoadError(error);
+  }
+}
+
+function parseGviz(response) {
+  const table = response.table;
+  const headers = table.cols.map(col => (col.label || '').trim());
+  return table.rows.map(row => {
+    const item = {};
+    headers.forEach((header, index) => {
+      const cell = row.c[index];
+      item[header] = cell ? (cell.f ?? cell.v ?? '') : '';
+    });
+    return item;
+  });
+}
+
+function normalizeDate(value) {
+  if (!value) return '';
+  const text = String(value).trim();
+  const dateMatch = text.match(/(\d{4})[\/-](\d{1,2})[\/-](\d{1,2})/);
+  if (dateMatch) {
+    const [, year, month, day] = dateMatch;
+    return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+  }
+  const gvizMatch = text.match(/Date\((\d+),(\d+),(\d+)/);
+  if (gvizMatch) {
+    const [, year, month, day] = gvizMatch.map(Number);
+    return `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+  }
+  return text.slice(0, 10);
+}
+
+function normalizeRows(rows) {
+  return rows.map(row => ({
+    date: normalizeDate(row['日期']),
+    bowel: clean(row['排便']),
+    stool: clean(row['大便性狀']),
+    walk: clean(row['走路']),
+    med: clean(row['用藥']),
+    mood: clean(row['精神']),
+    water: toNumber(row['喝水(ml)']),
+    note: clean(row['備註']),
+    saved: clean(row['儲存時間'])
+  })).filter(row => row.date);
+}
+
+function clean(value) {
+  return value == null ? '' : String(value).trim();
+}
+
+function toNumber(value) {
+  const number = Number(String(value ?? '').replace(/[^0-9.]/g, ''));
+  return Number.isFinite(number) ? number : 0;
+}
+
+function summarize(records) {
+  const groups = new Map();
+  records.forEach(record => {
+    if (!groups.has(record.date)) groups.set(record.date, []);
+    groups.get(record.date).push(record);
+  });
+  const daily = [...groups.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([date, rows]) => {
+    const notes = rows.map(row => row.note).filter(Boolean);
+    const water = rows.reduce((sum, row) => sum + row.water, 0);
+    const flags = [];
+    const hasNoBowel = rows.some(row => row.bowel === '沒有');
+    const hasHard = rows.some(row => row.stool === '硬');
+    const hasBadMood = rows.some(row => row.mood === '不好');
+    const hasNoWalk = rows.some(row => row.walk === '沒有');
+    const hasNoMed = rows.some(row => row.med === '沒有');
+    const hasConcernNote = notes.some(note => /痛|不舒服|吃很少|少吃|kurang|sedikit|makan/i.test(note));
+    if (hasNoBowel) flags.push('有未排便紀錄');
+    if (hasHard) flags.push('大便偏硬');
+    if (hasBadMood) flags.push('精神不好');
+    if (hasNoWalk) flags.push('沒有走路');
+    if (hasNoMed) flags.push('用藥未完成');
+    if (water > 0 && water < 800) flags.push('喝水偏少');
+    if (hasConcernNote) flags.push('備註有不適或吃少');
+    const highSignals = hasHard || hasBadMood || hasConcernNote || flags.length >= 4;
+    return {
+      date,
+      count: rows.length,
+      water,
+      bowelYes: count(rows, 'bowel', '有'),
+      bowelNo: count(rows, 'bowel', '沒有'),
+      hard: count(rows, 'stool', '硬'),
+      normal: count(rows, 'stool', '正常'),
+      soft: count(rows, 'stool', '軟'),
+      walkYes: count(rows, 'walk', '有'),
+      walkNo: count(rows, 'walk', '沒有'),
+      medYes: count(rows, 'med', '有'),
+      medNo: count(rows, 'med', '沒有'),
+      goodMood: count(rows, 'mood', '好'),
+      normalMood: count(rows, 'mood', '普通'),
+      badMood: count(rows, 'mood', '不好'),
+      notes: notes.join('；'),
+      flags,
+      risk: highSignals ? 'high' : flags.length ? 'medium' : 'low'
+    };
+  });
+
+  const waterDays = daily.filter(day => day.water > 0);
+  const recent7 = lastDays(daily, 7);
+  const prev7 = previousDays(daily, 7);
+  const summary = {
+    records: records.length,
+    days: daily.length,
+    start: daily[0]?.date || '',
+    end: daily.at(-1)?.date || '',
+    avgDailyWater: Math.round(avg(waterDays.map(day => day.water))),
+    recentWater: Math.round(avg(recent7.filter(day => day.water > 0).map(day => day.water))),
+    prevWater: Math.round(avg(prev7.filter(day => day.water > 0).map(day => day.water))),
+    lowWaterDays: daily.filter(day => day.water > 0 && day.water < 800).length,
+    noBowelDays: daily.filter(day => day.bowelNo > 0).length,
+    hardStoolDays: daily.filter(day => day.hard > 0).length,
+    badMoodDays: daily.filter(day => day.badMood > 0).length,
+    noWalkDays: daily.filter(day => day.walkNo > 0).length,
+    noMedDays: daily.filter(day => day.medNo > 0).length,
+    highDays: daily.filter(day => day.risk === 'high').length,
+    recentRisk: recent7.filter(day => day.risk === 'high').length,
+    prevRisk: prev7.filter(day => day.risk === 'high').length,
+    counts: {
+      '排便': distribution(records, 'bowel'),
+      '大便性狀': distribution(records, 'stool'),
+      '走路': distribution(records, 'walk'),
+      '用藥': distribution(records, 'med'),
+      '精神': distribution(records, 'mood')
+    }
+  };
+  const latestDate = daily.at(-1)?.date || '';
+  const recentCritical = daily.filter(day => day.risk !== 'low' && withinLastDays(day.date, latestDate, 30));
+  return { summary, daily, critical: recentCritical };
+}
+
+function count(rows, key, value) { return rows.filter(row => row[key] === value).length; }
+function avg(values) { return values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : 0; }
+function lastDays(daily, size) { return daily.slice(Math.max(0, daily.length - size)); }
+function previousDays(daily, size) { return daily.slice(Math.max(0, daily.length - size * 2), Math.max(0, daily.length - size)); }
+function withinLastDays(dateText, latestDateText, days) {
+  if (!dateText || !latestDateText) return false;
+  const date = new Date(`${dateText}T00:00:00`);
+  const latest = new Date(`${latestDateText}T00:00:00`);
+  const diffDays = Math.round((latest - date) / 86400000);
+  return diffDays >= 0 && diffDays < days;
+}
+function distribution(records, key) {
+  return records.reduce((acc, row) => {
+    if (row[key]) acc[row[key]] = (acc[row[key]] || 0) + 1;
+    return acc;
+  }, {});
+}
+function trendText(now, before, unit = '') {
+  if (!before && !now) return '資料不足';
+  if (!before) return `近期 ${now}${unit}`;
+  const diff = now - before;
+  if (Math.abs(diff) < 1) return `與前期差不多`;
+  return `${diff > 0 ? '增加' : '減少'} ${Math.abs(diff)}${unit}`;
+}
+
+function renderDashboard(records) {
+  const data = summarize(records);
+  window.DASHBOARD_DATA = data;
+  const s = data.summary;
+  document.getElementById('status').textContent = `已讀取最新資料：${s.start} 至 ${s.end}，共 ${s.records} 筆、${s.days} 天。`;
+  document.getElementById('subtitle').textContent = `每日更新資料會自動重新分析。資料來源只讀，不會修改原始試算表。`;
+  renderCards(s);
+  renderLatest(data.daily.at(-1));
+  drawWater(data.daily);
+  renderBowelChart(data.daily);
+  renderBars(s.counts);
+  renderRiskRows(currentFilter);
+  renderAnalysis(s, data.daily);
+}
+
+function renderCards(s) {
+  const cards = [
+    ['平均喝水', `${s.avgDailyWater} ml`, `近 7 天：${s.recentWater || 0} ml，${trendText(s.recentWater, s.prevWater, ' ml')}`],
+    ['喝水偏少天數', `${s.lowWaterDays} 天`, '有紀錄且低於 800 ml 的日期'],
+    ['未排便天數', `${s.noBowelDays} 天`, '同一天只要有一次填「沒有」就列入觀察'],
+    ['硬便天數', `${s.hardStoolDays} 天`, '便祕或水分不足時常見，需要留意'],
+    ['精神不好天數', `${s.badMoodDays} 天`, '精神狀態下降會提高注意等級'],
+    ['高注意天數', `${s.highDays} 天`, `近 7 天 ${s.recentRisk} 天，${trendText(s.recentRisk, s.prevRisk, ' 天')}`]
+  ];
+  document.getElementById('cards').innerHTML = cards.map(([label, value, hint]) =>
+    `<div class="card"><div class="label">${label}</div><div class="value">${value}</div><div class="hint">${hint}</div></div>`
+  ).join('');
+}
+
+function renderLatest(day) {
+  if (!day) return;
+  const risk = day.risk === 'high' ? '高注意' : day.risk === 'medium' ? '觀察' : '穩定';
+  const rows = [
+    ['日期', day.date],
+    ['狀態', `<span class="pill risk-${day.risk}">${risk}</span>`],
+    ['喝水', `${day.water || 0} ml`],
+    ['排便', `有 ${day.bowelYes} 次、沒有 ${day.bowelNo} 次`],
+    ['大便性狀', `正常 ${day.normal} 次、硬 ${day.hard} 次、軟 ${day.soft} 次`],
+    ['走路', day.walkNo ? `有未走路紀錄` : '有走路'],
+    ['用藥', day.medNo ? `有未用藥紀錄` : '有用藥'],
+    ['備註', day.notes || '無']
+  ];
+  document.getElementById('latest').innerHTML = rows.map(([k, v]) =>
+    `<div class="latest-row"><span>${k}</span><strong>${v}</strong></div>`
+  ).join('');
+}
+
+function drawWater(daily) {
+  const canvas = document.getElementById('waterChart');
+  const ctx = canvas.getContext('2d');
+  const width = canvas.width;
+  const height = canvas.height;
+  const pad = 44;
+  const max = Math.max(1000, ...daily.map(day => day.water)) * 1.12;
+  ctx.clearRect(0, 0, width, height);
+  ctx.font = '13px Microsoft JhengHei, Arial';
+  ctx.lineWidth = 1;
+  ctx.strokeStyle = '#d9dfdf';
+  ctx.fillStyle = '#657282';
+  for (let i = 0; i <= 4; i++) {
+    const y = pad + (height - pad * 2) * i / 4;
+    const value = Math.round(max * (1 - i / 4));
+    ctx.beginPath();
+    ctx.moveTo(pad, y);
+    ctx.lineTo(width - pad, y);
+    ctx.stroke();
+    ctx.fillText(`${value}ml`, 2, y + 4);
+  }
+  const targetY = height - pad - (800 / max) * (height - pad * 2);
+  ctx.strokeStyle = '#a96522';
+  ctx.setLineDash([6, 5]);
+  ctx.beginPath();
+  ctx.moveTo(pad, targetY);
+  ctx.lineTo(width - pad, targetY);
+  ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle = '#a96522';
+  ctx.fillText('800ml', width - pad - 48, targetY - 7);
+  const step = (width - pad * 2) / Math.max(1, daily.length - 1);
+  ctx.beginPath();
+  daily.forEach((day, index) => {
+    const x = pad + index * step;
+    const y = height - pad - (day.water / max) * (height - pad * 2);
+    if (index) ctx.lineTo(x, y); else ctx.moveTo(x, y);
+  });
+  ctx.strokeStyle = '#246b8f';
+  ctx.lineWidth = 3;
+  ctx.stroke();
+  daily.forEach((day, index) => {
+    const x = pad + index * step;
+    const y = height - pad - (day.water / max) * (height - pad * 2);
+    ctx.beginPath();
+    ctx.arc(x, y, day.risk === 'high' ? 5 : 4, 0, Math.PI * 2);
+    ctx.fillStyle = day.risk === 'high' ? '#b9413d' : day.risk === 'medium' ? '#a96522' : '#28755a';
+    ctx.fill();
+  });
+  ctx.fillStyle = '#657282';
+  [0, Math.floor(daily.length / 2), daily.length - 1].forEach(index => {
+    if (daily[index]) ctx.fillText(daily[index].date.slice(5), pad + index * step - 16, height - 12);
+  });
+}
+
+function renderBowelChart(daily) {
+  const days = daily.slice(Math.max(0, daily.length - 30)).reverse();
+  document.getElementById('bowelChart').innerHTML = days.map(day => {
+    let state = 'empty';
+    let label = '未填';
+    let mark = '-';
+    if (day.bowelYes > 0 && day.bowelNo > 0) {
+      state = 'mixed';
+      label = '混合';
+      mark = '!';
+    } else if (day.bowelYes > 0) {
+      state = 'yes';
+      label = '有';
+      mark = '✓';
+    } else if (day.bowelNo > 0) {
+      state = 'no';
+      label = '沒有';
+      mark = '×';
+    }
+    return `<div class="bowel-day bowel-${state}" title="${day.date}：${label}"><div class="bowel-mark">${mark}</div><div class="bowel-date">${day.date.slice(5)}</div><div class="bowel-state">${label}</div></div>`;
+  }).join('');
+}
+
+function renderBars(counts) {
+  const palette = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#17becf', '#bcbd22'];
+  const html = Object.entries(counts).map(([title, items]) => {
+    const entries = Object.entries(items).filter(([, value]) => value > 0);
+    const total = entries.reduce((sum, [, value]) => sum + value, 0);
+    let start = 0;
+    const segments = entries.map(([name, value], index) => {
+      const end = start + (value / total) * 100;
+      const color = palette[index % palette.length];
+      const segment = `${color} ${start.toFixed(2)}% ${end.toFixed(2)}%`;
+      start = end;
+      return { name, value, color, percent: Math.round(value / total * 100), segment };
+    });
+    const background = segments.length ? `conic-gradient(${segments.map(item => item.segment).join(', ')})` : '#edf1f2';
+    const legend = `<div class="legend-head"><span></span><span>項目</span><span>筆數 / 百分比</span></div>` + segments.map(item =>
+      `<div class="legend-row"><span class="legend-dot" style="background:${item.color}"></span><span class="legend-label">${item.name}</span><span class="legend-value">${item.value} / ${item.percent}%</span></div>`
+    ).join('');
+    return `<div class="pie-card"><div class="pie-title">${title}</div><div class="pie-wrap"><div class="pie" style="background:${background}"><div class="pie-total">共 ${total} 筆</div></div><div class="legend">${legend}</div></div><div class="pie-note">百分比 = 該項目筆數 ÷ 此欄位有填寫的總筆數。</div></div>`;
+  }).join('');
+  document.getElementById('bars').innerHTML = html;
+}
+
+function renderRiskRows(filter = 'all') {
+  currentFilter = filter;
+  const rows = window.DASHBOARD_DATA.critical
+    .filter(day => filter === 'all' || day.risk === filter)
+    .slice()
+    .reverse();
+  document.getElementById('riskRows').innerHTML = rows.map(day => {
+    const label = day.risk === 'high' ? '高注意' : '觀察';
+    return `<tr><td><div class="date-cell"><span class="pill risk-${day.risk}">${label}</span><span class="date-text">${day.date}</span></div></td><td>${day.water || '-'} ml</td><td>${day.flags.map(flag => `<span class="pill">${flag}</span>`).join('')}</td><td>${day.notes || ''}</td></tr>`;
+  }).join('') || '<tr><td colspan="4">目前沒有符合條件的日期。</td></tr>';
+}
+
+function renderAnalysis(s, daily) {
+  const messages = [];
+  const last = daily.at(-1);
+  if (s.recentRisk < s.prevRisk) {
+    messages.push(['good', `近 7 天高注意天數比前 7 天少，整體有進步。繼續維持固定走路、用藥和紀錄。`]);
+  } else if (s.recentRisk > s.prevRisk) {
+    messages.push(['danger', `近 7 天高注意天數比前 7 天多，需要多看排便、精神、吃飯與備註是否一起變差。`]);
+  } else {
+    messages.push(['', `近 7 天高注意天數與前期差不多，先看單日異常是否連續發生。`]);
+  }
+  if (s.recentWater && s.prevWater && s.recentWater > s.prevWater) {
+    messages.push(['good', `喝水量近 7 天比前期增加，這對排便偏硬是好訊號。若有醫師限水，仍以醫囑為準。`]);
+  } else if (s.recentWater && s.recentWater < 800) {
+    messages.push(['warn', `近期平均喝水仍低於 800 ml，可分次提醒補水，並搭配觀察尿量、精神和便性。`]);
+  }
+  if (s.hardStoolDays || s.noBowelDays) {
+    messages.push(['warn', `排便是目前最需要長期追蹤的項目：未排便 ${s.noBowelDays} 天、硬便 ${s.hardStoolDays} 天。若連續多天未解便、腹痛或食慾下降，建議詢問醫師。`]);
+  }
+  if (s.badMoodDays) {
+    messages.push(['danger', `曾出現精神不好 ${s.badMoodDays} 天。若伴隨嗜睡、意識混亂、發燒、呼吸喘或明顯食慾下降，應優先聯絡醫護人員。`]);
+  }
+  if (last?.risk === 'low') {
+    messages.push(['good', `最新一天狀態穩定，沒有觸發主要警訊。`]);
+  } else if (last) {
+    messages.push(['warn', `最新一天需要觀察：${last.flags.join('、')}。`]);
+  }
+  document.getElementById('analysis').innerHTML = messages.map(([kind, text]) =>
+    `<div class="${kind}">${text}</div>`
+  ).join('');
+}
+
+function showLoadError(error) {
+  document.getElementById('status').innerHTML = `讀取失敗：${error.message}。請確認試算表已允許檢視，或在 Google 試算表使用「檔案 → 共用 → 發布到網路」讓唯讀查詢端點可讀。`;
+}
+
+document.querySelectorAll('button[data-filter]').forEach(button => {
+  button.addEventListener('click', () => {
+    document.querySelectorAll('button[data-filter]').forEach(item => item.classList.remove('active'));
+    button.classList.add('active');
+    renderRiskRows(button.dataset.filter);
+  });
+});
+
+const script = document.createElement('script');
+script.src = QUERY_URL;
+script.onerror = () => showLoadError(new Error('無法連線到 Google Sheets 查詢端點'));
+document.body.appendChild(script);
+</script>
+</body>
+</html>
