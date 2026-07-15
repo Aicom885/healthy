@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>阿嬤健康儀表板</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Noto+Serif+TC:wght@600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root{
+    --bg:#F2F4F1; --card:#FFFFFF; --ink:#26332B; --ink-soft:#5C6B61;
+    --line:#DDE4DE; --green:#2E6B4F; --green-soft:#E4EEE8;
+    --ok:#2E7D4F; --warn:#B8730A; --warn-bg:#FBF3E2;
+    --alert:#C0392B; --alert-bg:#FBEAE7;
+    --serif:'Noto Serif TC',serif; --sans:'Noto Sans TC',sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--ink);font-family:var(--sans);padding:14px;max-width:960px;margin:0 auto}
+
+  header{display:flex;align-items:baseline;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:6px}
+  h1{font-family:var(--serif);font-size:1.5rem;color:var(--green)}
+  .updated{font-size:.78rem;color:var(--ink-soft)}
+  .btn{background:var(--green);color:#fff;border:none;border-radius:8px;padding:7px 16px;font-family:var(--sans);font-size:.85rem;cursor:pointer}
+  .btn:active{opacity:.8}
+
+  .strip{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin:10px 0;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px}
+  .strip .date{font-family:var(--serif);font-weight:700;font-size:1.05rem}
+  .slots{display:flex;gap:14px}
+  .slot{display:flex;align-items:center;gap:5px;font-size:.85rem;color:var(--ink-soft)}
+  .dot{width:13px;height:13px;border-radius:50%;border:2px solid var(--line);background:transparent}
+  .dot.filled{background:var(--green);border-color:var(--green)}
+
+  .banner{border-radius:12px;padding:11px 14px;margin:10px 0;font-size:.88rem;line-height:1.55}
+  .banner.ok{background:var(--green-soft);color:var(--green)}
+  .banner.alert{background:var(--alert-bg);color:var(--alert);border:1px solid #EFC7C0}
+  .banner.warn{background:var(--warn-bg);color:var(--warn);border:1px solid #EEDDB8}
+  .banner b{display:block;margin-bottom:2px}
+
+  .section-title{font-family:var(--serif);font-size:1.05rem;color:var(--green);margin:20px 0 8px;padding-left:10px;border-left:4px solid var(--green)}
+  .sub{font-size:.75rem;color:var(--ink-soft);font-family:var(--sans);font-weight:400;margin-left:6px}
+
+  .cards{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+  @media(min-width:640px){.cards{grid-template-columns:repeat(4,1fr)}}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+  .card .label{font-size:.75rem;color:var(--ink-soft);margin-bottom:4px}
+  .card .value{font-family:var(--serif);font-size:1.7rem;font-weight:700;line-height:1.1}
+  .card .unit{font-size:.75rem;color:var(--ink-soft);font-family:var(--sans);font-weight:400}
+  .card .status{display:inline-block;margin-top:6px;font-size:.72rem;padding:2px 8px;border-radius:20px}
+  .st-ok{background:var(--green-soft);color:var(--ok)}
+  .st-warn{background:var(--warn-bg);color:var(--warn)}
+  .st-alert{background:var(--alert-bg);color:var(--alert)}
+  .card.v-warn{border-color:#E8C98A}
+  .card.v-alert{border-color:#E5A79D}
+
+  .water{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+  .water .row{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px}
+  .water .big{font-family:var(--serif);font-size:1.5rem;font-weight:700}
+  .bar{height:14px;background:var(--bg);border-radius:8px;overflow:hidden;position:relative}
+  .bar .fill{height:100%;background:var(--green);border-radius:8px;transition:width .5s}
+  .bar .fill.low{background:var(--warn)}
+
+  .chart-box{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:10px}
+  .chart-box canvas{max-height:230px}
+
+  table{width:100%;border-collapse:collapse;background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden;font-size:.8rem}
+  th{background:var(--green-soft);color:var(--green);padding:8px 6px;text-align:left;font-weight:500;white-space:nowrap}
+  td{padding:7px 6px;border-top:1px solid var(--line);white-space:nowrap}
+  .table-wrap{overflow-x:auto;border-radius:12px}
+  .tag{display:inline-block;padding:1px 7px;border-radius:12px;font-size:.72rem}
+  .tag.ev{background:var(--alert-bg);color:var(--alert)}
+  .tag.med-no{background:var(--warn-bg);color:var(--warn)}
+
+  .loading,.error{text-align:center;padding:40px 10px;color:var(--ink-soft)}
+  .error{color:var(--alert)}
+  footer{text-align:center;font-size:.72rem;color:var(--ink-soft);margin:24px 0 10px}
+</style>
+</head>
+<body>
+<header>
+  <h1>🌿 阿嬤健康儀表板</h1>
+  <div>
+    <span class="updated" id="updated"></span>
+    <button class="btn" onclick="loadData()">重新整理</button>
+  </div>
+</header>
+
+<div id="app"><div class="loading">資料載入中…</div></div>
+
+<footer>資料來源：看護每日填寫之 Google 表單｜發布資料約有 5 分鐘延遲</footer>
+
+<script>
+const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSJ24qo4Zb4vv9DmuiqEDoFiD_S-2y0OPUxU_9_1dStBv0D2rEaUEbvswxwTyKfvbIy7M6YfKE2nRTj/pub?output=csv';
+const WATER_TARGET = 1000;
+let charts = [];
+
+/* ---------- CSV 解析（支援引號內逗號與換行） ---------- */
+function parseCSV(text){
+  const rows=[]; let row=[], cur='', inQ=false;
+  for(let i=0;i<text.length;i++){
+    const c=text[i];
+    if(inQ){
+      if(c==='"'){ if(text[i+1]==='"'){cur+='"';i++;} else inQ=false; }
+      else cur+=c;
+    }else{
+      if(c==='"') inQ=true;
+      else if(c===','){row.push(cur);cur='';}
+      else if(c==='\n'){row.push(cur);rows.push(row);row=[];cur='';}
+      else if(c!=='\r') cur+=c;
+    }
+  }
+  if(cur!==''||row.length){row.push(cur);rows.push(row);}
+  return rows.filter(r=>r.some(c=>c.trim()!==''));
+}
+
+/* ---------- 欄位對應碼 ---------- */
+function mapColumns(header){
+  const codes=['PERIOD','SBP','DBP','HR','SPO2','TEMP','MEAL','WATER','BOWEL','MED','MOOD','EVENT','NOTE'];
+  const map={ts:0};
+  header.forEach((h,i)=>{
+    codes.forEach(code=>{ if(h.includes('['+code+']')) map[code.toLowerCase()]=i; });
+    if(/timestamp|時間戳記/i.test(h)) map.ts=i;
+  });
+  return map;
+}
+
+function parseTS(s){
+  // 格式 M/D/YYYY H:MM:SS
+  const m=s.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})\s+(\d{1,2}):(\d{2}):(\d{2})/);
+  if(m) return new Date(+m[3],+m[1]-1,+m[2],+m[4],+m[5],+m[6]);
+  const d=new Date(s); return isNaN(d)?null:d;
+}
+
+function parseRows(rows){
+  const map=mapColumns(rows[0]);
+  const g=(r,k)=> map[k]!==undefined ? (r[map[k]]||'').trim() : '';
+  const num=(r,k)=>{ const v=parseFloat(g(r,k)); return isNaN(v)?null:v; };
+  return rows.slice(1).map(r=>({
+    ts:parseTS(g(r,'ts')), period:g(r,'period'),
+    sbp:num(r,'sbp'), dbp:num(r,'dbp'), hr:num(r,'hr'),
+    spo2:num(r,'spo2'), temp:num(r,'temp'),
+    meal:g(r,'meal'), water:num(r,'water'), bowel:g(r,'bowel'),
+    med:g(r,'med'), mood:g(r,'mood'), event:g(r,'event'), note:g(r,'note')
+  })).filter(x=>x.ts).sort((a,b)=>a.ts-b.ts);
+}
+
+/* ---------- 判讀規則 ---------- */
+function stSBP(v){ if(v==null)return null;
+  if(v>=160)return['alert','過高'];  if(v>=140)return['warn','偏高'];
+  if(v<90)  return['warn','偏低'];  return['ok','正常']; }
+function stDBP(v){ if(v==null)return null;
+  if(v>=100)return['alert','過高']; if(v>=90)return['warn','偏高'];
+  if(v<60)  return['warn','偏低'];  return['ok','正常']; }
+function stHR(v){ if(v==null)return null;
+  if(v>120||v<50)return['alert','異常']; if(v>100||v<60)return['warn','注意'];
+  return['ok','正常']; }
+function stSPO2(v){ if(v==null)return null;
+  if(v<90)return['alert','過低']; if(v<95)return['warn','偏低'];
+  return['ok','正常']; }
+function stTEMP(v){ if(v==null)return null;
+  if(v>38)return['alert','發燒']; if(v>=37.5)return['warn','微燒'];
+  if(v<35.5)return['warn','偏低']; return['ok','正常']; }
+const worse={ok:0,warn:1,alert:2};
+function combine(a,b){ if(!a)return b; if(!b)return a; return worse[a[0]]>=worse[b[0]]?a:b; }
+
+function fmtDate(d){ return (d.getMonth()+1)+'/'+d.getDate(); }
+function fmtTime(d){ return fmtDate(d)+' '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); }
+function dayKey(d){ return d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate(); }
+function periodShort(p){ if(p.includes('早'))return'早'; if(p.includes('中'))return'中'; if(p.includes('晚'))return'晚'; return p; }
+
+/* ---------- 主流程 ---------- */
+async function loadData(){
+  const app=document.getElementById('app');
+  app.innerHTML='<div class="loading">資料載入中…</div>';
+  charts.forEach(c=>c.destroy()); charts=[];
+  try{
+    const res=await fetch(CSV_URL+'&_='+Date.now());
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    const text=await res.text();
+    const rows=parseCSV(text);
+    if(rows.length<2){ app.innerHTML='<div class="loading">目前還沒有任何紀錄，請看護先填寫第一筆表單。</div>'; return; }
+    render(parseRows(rows));
+    document.getElementById('updated').textContent='更新於 '+fmtTime(new Date())+'　';
+  }catch(e){
+    app.innerHTML='<div class="error">資料載入失敗（'+e.message+'）<br>請確認網路連線，或試算表是否仍為「發布到網路」狀態。</div>';
+  }
+}
+
+function render(data){
+  const latest=data[data.length-1];
+  const today=new Date(); const tKey=dayKey(today);
+  const todayRows=data.filter(r=>dayKey(r.ts)===tKey);
+
+  /* 今日填寫狀態 */
+  const done=p=>todayRows.some(r=>r.period.includes(p));
+  const slots=['早','中','晚'].map(p=>
+    '<span class="slot"><span class="dot'+(done(p)?' filled':'')+'"></span>'+p+'</span>').join('');
+
+  /* 警示彙整（以今日紀錄為主；今日沒有紀錄則看最新一筆） */
+  const checkRows=todayRows.length?todayRows:[latest];
+  const alerts=[];
+  checkRows.forEach(r=>{
+    const t=periodShort(r.period)+'班';
+    const push=(st,txt)=>{ if(st&&st[0]!=='ok') alerts.push({lv:st[0],msg:t+'：'+txt+'（'+st[1]+'）'}); };
+    push(stSBP(r.sbp),'收縮壓 '+r.sbp);
+    push(stDBP(r.dbp),'舒張壓 '+r.dbp);
+    push(stHR(r.hr),'心跳 '+r.hr);
+    push(stSPO2(r.spo2),'血氧 '+r.spo2+'%');
+    push(stTEMP(r.temp),'體溫 '+r.temp+'°C');
+    if(r.event && !r.event.includes('無')) alerts.push({lv:'alert',msg:t+'：異常事件 — '+r.event});
+    if(r.med.includes('未服藥')) alerts.push({lv:'warn',msg:t+'：尚未服藥'});
+  });
+  const waterToday=todayRows.reduce((s,r)=>s+(r.water||0),0);
+
+  let banner;
+  if(!todayRows.length){
+    banner='<div class="banner warn"><b>📋 今日尚無紀錄</b>以下顯示最近一筆（'+fmtTime(latest.ts)+'）的狀態。</div>';
+  }
+  const hasAlert=alerts.some(a=>a.lv==='alert');
+  if(alerts.length){
+    banner=(banner||'')+'<div class="banner '+(hasAlert?'alert':'warn')+'"><b>'+(hasAlert?'🔴 需要留意':'🟡 注意事項')+'</b>'+alerts.map(a=>'・'+a.msg).join('<br>')+'</div>';
+  }else if(todayRows.length){
+    banner='<div class="banner ok"><b>🟢 目前一切正常</b>今日各項數值皆在正常範圍。</div>';
+  }
+
+  /* 最新生命徵象卡片 */
+  const bpSt=combine(stSBP(latest.sbp),stDBP(latest.dbp));
+  const cards=[
+    {label:'血壓',val:(latest.sbp??'–')+'/'+(latest.dbp??'–'),unit:'mmHg',st:bpSt},
+    {label:'心跳',val:latest.hr??'–',unit:'次/分',st:stHR(latest.hr)},
+    {label:'血氧',val:latest.spo2??'–',unit:'%',st:stSPO2(latest.spo2)},
+    {label:'體溫',val:latest.temp??'–',unit:'°C',st:stTEMP(latest.temp)}
+  ].map(c=>{
+    const st=c.st||['ok','—'];
+    return '<div class="card v-'+st[0]+'"><div class="label">'+c.label+'</div>'+
+      '<div class="value">'+c.val+' <span class="unit">'+c.unit+'</span></div>'+
+      '<span class="status st-'+st[0]+'">'+st[1]+'</span></div>';
+  }).join('');
+
+  /* 喝水進度 */
+  const pct=Math.min(100,Math.round(waterToday/WATER_TARGET*100));
+  const waterHTML='<div class="water"><div class="row"><span>今日喝水量</span>'+
+    '<span class="big">'+waterToday+' <span class="unit">/ '+WATER_TARGET+' ml</span></span></div>'+
+    '<div class="bar"><div class="fill'+(pct<100?' low':'')+'" style="width:'+pct+'%"></div></div></div>';
+
+  /* 生活紀錄表（最近 15 筆） */
+  const recent=[...data].reverse().slice(0,15);
+  const lifeRows=recent.map(r=>{
+    const ev=r.event&&!r.event.includes('無')?'<span class="tag ev">'+r.event+'</span>':'—';
+    const med=r.med.includes('未服藥')?'<span class="tag med-no">'+r.med+'</span>':r.med;
+    return '<tr><td>'+fmtDate(r.ts)+' '+periodShort(r.period)+'</td><td>'+(r.meal||'—')+'</td><td>'+(r.water??'—')+'</td><td>'+(r.bowel||'—')+'</td><td>'+med+'</td><td>'+(r.mood||'—')+'</td><td>'+ev+'</td><td style="white-space:normal;min-width:120px">'+(r.note||'')+'</td></tr>';
+  }).join('');
+
+  document.getElementById('app').innerHTML=
+    '<div class="strip"><span class="date">'+ (today.getMonth()+1)+'月'+today.getDate()+'日</span><div class="slots">'+slots+'</div></div>'+
+    (banner||'')+
+    '<div class="section-title">最新生命徵象 <span class="sub">'+fmtTime(latest.ts)+'・'+periodShort(latest.period)+'班</span></div>'+
+    '<div class="cards">'+cards+'</div>'+
+    '<div class="section-title">飲水</div>'+waterHTML+
+    '<div class="section-title">趨勢圖 <span class="sub">最近 14 天</span></div>'+
+    '<div class="chart-box"><canvas id="bpChart"></canvas></div>'+
+    '<div class="chart-box"><canvas id="hsChart"></canvas></div>'+
+    '<div class="chart-box"><canvas id="waterChart"></canvas></div>'+
+    '<div class="section-title">生活紀錄 <span class="sub">最近 15 筆</span></div>'+
+    '<div class="table-wrap"><table><thead><tr><th>日期</th><th>進食</th><th>喝水ml</th><th>排便</th><th>用藥</th><th>情緒</th><th>異常</th><th>備註</th></tr></thead><tbody>'+lifeRows+'</tbody></table></div>';
+
+  drawCharts(data);
+}
+
+function drawCharts(data){
+  const cutoff=Date.now()-14*86400000;
+  const d=data.filter(r=>r.ts>=cutoff);
+  const labels=d.map(r=>fmtDate(r.ts)+periodShort(r.period));
+  Chart.defaults.font.family="'Noto Sans TC',sans-serif";
+  Chart.defaults.color='#5C6B61';
+  const grid={color:'#E7ECE8'};
+
+  charts.push(new Chart(document.getElementById('bpChart'),{
+    type:'line',
+    data:{labels,datasets:[
+      {label:'收縮壓',data:d.map(r=>r.sbp),borderColor:'#C0392B',backgroundColor:'#C0392B',tension:.3,pointRadius:3},
+      {label:'舒張壓',data:d.map(r=>r.dbp),borderColor:'#2E6B4F',backgroundColor:'#2E6B4F',tension:.3,pointRadius:3}
+    ]},
+    options:{plugins:{title:{display:true,text:'血壓 (mmHg)'}},scales:{y:{suggestedMin:50,suggestedMax:170,grid},x:{grid}}}
+  }));
+
+  charts.push(new Chart(document.getElementById('hsChart'),{
+    type:'line',
+    data:{labels,datasets:[
+      {label:'心跳',data:d.map(r=>r.hr),borderColor:'#B8730A',backgroundColor:'#B8730A',tension:.3,pointRadius:3,yAxisID:'y'},
+      {label:'血氧%',data:d.map(r=>r.spo2),borderColor:'#2A6F97',backgroundColor:'#2A6F97',tension:.3,pointRadius:3,yAxisID:'y2'},
+      {label:'體溫°C',data:d.map(r=>r.temp),borderColor:'#8E5DA8',backgroundColor:'#8E5DA8',tension:.3,pointRadius:3,yAxisID:'y3',hidden:true}
+    ]},
+    options:{plugins:{title:{display:true,text:'心跳／血氧／體溫（點圖例可切換）'}},
+      scales:{y:{position:'left',suggestedMin:50,suggestedMax:120,grid,title:{display:true,text:'心跳'}},
+              y2:{position:'right',suggestedMin:85,suggestedMax:100,grid:{drawOnChartArea:false},title:{display:true,text:'血氧%'}},
+              y3:{display:false,suggestedMin:35,suggestedMax:39},x:{grid}}}
+  }));
+
+  /* 每日喝水加總 */
+  const byDay={};
+  data.forEach(r=>{ const k=dayKey(r.ts); byDay[k]=(byDay[k]||0)+(r.water||0); });
+  const days=Object.keys(byDay).slice(-14);
+  charts.push(new Chart(document.getElementById('waterChart'),{
+    type:'bar',
+    data:{labels:days.map(k=>{const p=k.split('-');return p[1]+'/'+p[2];}),datasets:[
+      {label:'每日喝水量 ml',data:days.map(k=>byDay[k]),
+       backgroundColor:days.map(k=>byDay[k]>=WATER_TARGET?'#2E6B4F':'#D9A441'),borderRadius:6},
+      {label:'目標 '+WATER_TARGET+' ml',data:days.map(()=>WATER_TARGET),type:'line',borderColor:'#C0392B',borderDash:[6,4],pointRadius:0}
+    ]},
+    options:{plugins:{title:{display:true,text:'每日喝水量（綠=達標，黃=未達標）'}},scales:{y:{beginAtZero:true,grid},x:{grid}}}
+  }));
+}
+
+loadData();
+</script>
+</body>
+</html>
